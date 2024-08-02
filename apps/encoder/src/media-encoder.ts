@@ -6,8 +6,12 @@ import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
 import fluentFfmpeg from "fluent-ffmpeg";
 import makeDebug from "debug";
+import Redis from "ioredis";
+import { EncodingStatus } from "./encoding-status";
 
 const debug = makeDebug("MediaEncoder");
+
+const ENCODER_EVENTS_KEY = "avenc:encoder:events";
 
 interface EncodingParams {
   encodingFormat: "mp3";
@@ -19,7 +23,16 @@ interface EncodingContext {
 }
 
 export class MediaEncoder {
-  constructor(private readonly pathToFfmpeg: string) {}
+  public static async create(pathToFfmpeg: string, redisHost: string, redisPort: number) {
+    const redisClient = new Redis(redisPort, redisHost);
+
+    return new MediaEncoder(pathToFfmpeg, redisClient);
+  }
+
+  constructor(
+    private readonly pathToFfmpeg: string,
+    private readonly redisClient: Redis,
+  ) {}
 
   public async encode(
     srcUrl: string,
@@ -36,17 +49,28 @@ export class MediaEncoder {
     try {
       // Download source file
       debug("Downloading source file to the temp dir");
+      await this.sendEncodingStatus({ status: "reading" }, ctx);
       const sourceFile = path.join(tmpDir, `input.${srcExt}`);
       await this.downloadFile(srcUrl, sourceFile);
 
       // Encode file
       debug("Encoding file");
       const dstFile = path.join(tmpDir, `output`);
-      await this.encodeFileUsingFfmpeg(sourceFile, dstFile, params, ctx);
+      await this.sendEncodingStatus({ status: "encoding", percent: 0 }, ctx);
+      await this.encodeFileUsingFfmpeg(sourceFile, dstFile, params, (percent) => {
+        this.sendEncodingStatus({ status: "encoding", percent }, ctx).catch((error) => {
+          debug("Unable to publish encoding status", error);
+        });
+      });
+      await this.sendEncodingStatus({ status: "encoding", percent: 100 }, ctx);
 
       // Upload encoded file
       debug("Uploading encoded file");
+      await this.sendEncodingStatus({ status: "writing" }, ctx);
       await this.uploadFile(dstFile, dstUrl);
+    } catch (error) {
+      await this.sendEncodingStatus({ status: "error" }, ctx);
+      throw error;
     } finally {
       // Cleanup created files and directories
       debug("Removing temp dir");
@@ -81,7 +105,12 @@ export class MediaEncoder {
     }
   }
 
-  private async encodeFileUsingFfmpeg(srcFile: string, dstFile: string, params: EncodingParams, ctx: EncodingContext) {
+  private async encodeFileUsingFfmpeg(
+    srcFile: string,
+    dstFile: string,
+    params: EncodingParams,
+    onProgress: (percent: number) => void,
+  ) {
     await new Promise<void>((resolve, reject) => {
       const command = fluentFfmpeg(srcFile).format(params.encodingFormat);
 
@@ -94,10 +123,14 @@ export class MediaEncoder {
         .on("end", () => resolve())
         .on("error", (error) => reject(error))
         .on("progress", (progress) => {
-          // TODO Publish encoding progress progress
-          console.log("progress", progress);
+          onProgress(progress.percent ?? 0);
         })
+        .setFfmpegPath(this.pathToFfmpeg)
         .run();
     });
+  }
+
+  private async sendEncodingStatus(status: EncodingStatus, { encodingJobId }: EncodingContext) {
+    await this.redisClient.xadd(ENCODER_EVENTS_KEY, "*", "jobId", encodingJobId, "event", JSON.stringify(status));
   }
 }

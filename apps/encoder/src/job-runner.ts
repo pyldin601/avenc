@@ -13,7 +13,7 @@ interface Job {
   audioBitrate: number | null;
 }
 
-const ENCODING_JOBS_QUEUE = "avenc:Encoding";
+const ENCODING_JOBS_QUEUE = "avenc:encoder:queue";
 
 export class JobRunner {
   private encodingWorkers: Array<Worker<Job>> = [];
@@ -34,6 +34,7 @@ export class JobRunner {
   ) {}
 
   public async addJob(job: Job): Promise<void> {
+    // TODO Probe file before sending to encoder
     debug("Adding new encoding job", job);
     await this.queue.add(ENCODING_JOBS_QUEUE, job, { attempts: 1 });
   }
