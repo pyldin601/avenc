@@ -1,6 +1,8 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "sourceRoot": "src/index.ts",
+    "outDir": "dist/",
     "types": [
       "@types/node"
     ]
