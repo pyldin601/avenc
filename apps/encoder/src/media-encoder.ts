@@ -5,6 +5,9 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
 import fluentFfmpeg from "fluent-ffmpeg";
+import makeDebug from "debug";
+
+const debug = makeDebug("MediaEncoder");
 
 interface EncodingParams {
   encodingFormat: "mp3";
@@ -27,21 +30,28 @@ export class MediaEncoder {
     ctx: EncodingContext,
   ): Promise<void> {
     // Create temp dir for encoding job
+    debug("Creating temp dir for encoding file");
     const tmpDir = await mkdtemp(`${os.tmpdir()}${path.sep}`);
 
-    // Download source file
-    const sourceFile = path.join(tmpDir, `input.${srcExt}`);
-    await this.downloadFile(srcUrl, sourceFile);
+    try {
+      // Download source file
+      debug("Downloading source file to the temp dir");
+      const sourceFile = path.join(tmpDir, `input.${srcExt}`);
+      await this.downloadFile(srcUrl, sourceFile);
 
-    // Encode file
-    const dstFile = path.join(tmpDir, `output`);
-    await this.encodeFileUsingFfmpeg(sourceFile, dstFile, params, ctx);
+      // Encode file
+      debug("Encoding file");
+      const dstFile = path.join(tmpDir, `output`);
+      await this.encodeFileUsingFfmpeg(sourceFile, dstFile, params, ctx);
 
-    // Upload encoded file
-    await this.uploadFile(dstFile, dstUrl);
-
-    // Cleanup created files and directories
-    await rm(tmpDir, { recursive: true, force: true });
+      // Upload encoded file
+      debug("Uploading encoded file");
+      await this.uploadFile(dstFile, dstUrl);
+    } finally {
+      // Cleanup created files and directories
+      debug("Removing temp dir");
+      await rm(tmpDir, { recursive: true, force: true });
+    }
   }
 
   private async downloadFile(srcUrl: string, dstFile: string): Promise<void> {
@@ -61,10 +71,12 @@ export class MediaEncoder {
     const result = await fetch(dstUrl, {
       method: "put",
       headers: { "Content-Length": `${fileSizeInBytes}` },
+      duplex: "half",
       body: readStream,
     });
 
     if (!result.ok) {
+      debug("Unable to download the source file", result.statusText);
       throw new Error("Unable to upload the file");
     }
   }

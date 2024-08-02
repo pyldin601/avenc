@@ -35,7 +35,7 @@ export class JobRunner {
 
   public async addJob(job: Job): Promise<void> {
     debug("Adding new encoding job", job);
-    await this.queue.add(ENCODING_JOBS_QUEUE, job);
+    await this.queue.add(ENCODING_JOBS_QUEUE, job, { attempts: 1 });
   }
 
   public start() {
@@ -43,7 +43,7 @@ export class JobRunner {
       new Worker<Job>(
         ENCODING_JOBS_QUEUE,
         async (job) => {
-          debug("Consume job", job.data);
+          debug("Consuming a new encoding job", job.data);
           await this.handleJob(job.data);
         },
         {
