@@ -31,17 +31,46 @@ export class MediaEncoder {
 
     // Download source file
     const sourceFile = path.join(tmpDir, `input.${srcExt}`);
+    await this.downloadFile(srcUrl, sourceFile);
+
+    // Encode file
+    const dstFile = path.join(tmpDir, `output`);
+    await this.encodeFileUsingFfmpeg(sourceFile, dstFile, params, ctx);
+
+    await this.uploadFile(dstFile, dstUrl);
+
+    // Cleanup created files and directories
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+
+  private async downloadFile(srcUrl: string, dstFile: string): Promise<void> {
     const srcRes = await fetch(srcUrl);
     if (!srcRes.body) {
       throw new Error("Unable to download the source file");
     }
-    const fileStream = fs.createWriteStream(sourceFile, { flags: "wx" });
+    const fileStream = fs.createWriteStream(dstFile, { flags: "wx" });
     await finished(Readable.fromWeb(srcRes.body).pipe(fileStream));
+  }
 
-    // Encode file
-    const dstFile = path.join(tmpDir, `output`);
+  private async uploadFile(srcFile: string, dstUrl: string) {
+    const stats = await stat(srcFile);
+    const fileSizeInBytes = stats.size;
+
+    const readStream = fs.createReadStream(srcFile);
+    const result = await fetch(dstUrl, {
+      method: "put",
+      headers: { "Content-Length": `${fileSizeInBytes}` },
+      body: readStream,
+    });
+
+    if (result.ok) {
+      throw new Error("Unable to upload the file");
+    }
+  }
+
+  private async encodeFileUsingFfmpeg(srcFile: string, dstFile: string, params: EncodingParams, ctx: EncodingContext) {
     await new Promise<void>((resolve, reject) => {
-      const command = fluentFfmpeg(sourceFile).format(params.encodingFormat);
+      const command = fluentFfmpeg(srcFile).format(params.encodingFormat);
 
       if (params.audioBitrate) {
         command.audioBitrate(params.audioBitrate);
@@ -49,29 +78,13 @@ export class MediaEncoder {
 
       command
         .output(dstFile)
-        .on("error", (error) => reject(error))
         .on("end", () => resolve())
+        .on("error", (error) => reject(error))
         .on("progress", (progress) => {
           // TODO Publish encoding progress progress
           console.log("progress", progress);
         })
         .run();
     });
-
-    // Upload results to dest url
-    const stats = await stat(dstFile);
-    const fileSizeInBytes = stats.size;
-
-    const readStream = fs.createReadStream(dstFile);
-    await fetch(dstUrl, {
-      method: "put",
-      headers: {
-        "Content-Length": `${fileSizeInBytes}`,
-      },
-      body: readStream,
-    });
-
-    // Cleanup created files and directories
-    await rm(tmpDir, { recursive: true, force: true });
   }
 }
