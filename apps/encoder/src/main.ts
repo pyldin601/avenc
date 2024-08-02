@@ -6,15 +6,16 @@ import { v4 } from "uuid";
 export async function main(env: NodeJS.ProcessEnv) {
   const config = Config.fromEnv(env);
   const mediaEncoder = new MediaEncoder(config.pathToFfmpeg);
-  const jobRunner = await JobRunner.create(config.redisHost);
+  const jobRunner = await JobRunner.create(config.redisHost, config.redisPort);
 
-  for (let i = 0; i <= 100; i += 1) {
-    await jobRunner.addJob({ id: v4() });
-  }
+  jobRunner.start();
 
-  try {
-    await Promise.all([jobRunner.consumeJobs()]);
-  } finally {
-    await jobRunner.close();
-  }
+  await new Promise((resolve) => {
+    process.on("SIGINT", resolve);
+    process.on("SIGTERM", resolve);
+  });
+
+  await jobRunner.close();
+
+  process.exit(0);
 }
