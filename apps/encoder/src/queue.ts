@@ -1,6 +1,6 @@
 import makeDebug from "debug";
 import { Queue, Worker } from "bullmq";
-import { MediaEncoder } from "./media-encoder";
+import { MediaEncoder } from "./encoder";
 
 const debug = makeDebug("JobRunner");
 

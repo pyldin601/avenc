@@ -7,7 +7,7 @@ import { finished } from "node:stream/promises";
 import fluentFfmpeg from "fluent-ffmpeg";
 import makeDebug from "debug";
 import Redis from "ioredis";
-import { EncodingStatus } from "./encoding-status";
+import { EncodingStatuses } from "./statuses";
 
 const debug = makeDebug("MediaEncoder");
 
@@ -130,7 +130,7 @@ export class MediaEncoder {
     });
   }
 
-  private async sendEncodingStatus(status: EncodingStatus, { encodingJobId }: EncodingContext) {
+  private async sendEncodingStatus(status: EncodingStatuses, { encodingJobId }: EncodingContext) {
     await this.redisClient.xadd(ENCODER_EVENTS_KEY, "*", "jobId", encodingJobId, "event", JSON.stringify(status));
   }
 }

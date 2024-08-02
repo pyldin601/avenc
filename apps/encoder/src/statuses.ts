@@ -23,7 +23,7 @@ export interface EncodingStatusError {
   status: "error";
 }
 
-export type EncodingStatus =
+export type EncodingStatuses =
   | EncodingStatusInitial
   | EncodingStatusReading
   | EncodingStatusEncoding

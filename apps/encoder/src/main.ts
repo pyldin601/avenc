@@ -1,6 +1,6 @@
-import { JobRunner } from "./job-runner";
+import { JobRunner } from "./queue";
 import { Config } from "./config";
-import { MediaEncoder } from "./media-encoder";
+import { MediaEncoder } from "./encoder";
 
 export async function main(env: NodeJS.ProcessEnv) {
   const config = Config.fromEnv(env);
