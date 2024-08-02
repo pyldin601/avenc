@@ -64,7 +64,7 @@ export class MediaEncoder {
       body: readStream,
     });
 
-    if (result.ok) {
+    if (!result.ok) {
       throw new Error("Unable to upload the file");
     }
   }
