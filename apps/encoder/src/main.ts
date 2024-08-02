@@ -6,7 +6,7 @@ import { v4 } from "uuid";
 export async function main(env: NodeJS.ProcessEnv) {
   const config = Config.fromEnv(env);
   const mediaEncoder = new MediaEncoder(config.pathToFfmpeg);
-  const jobRunner = await JobRunner.create(config.redisHost, config.redisPort);
+  const jobRunner = await JobRunner.create(config.redisHost, config.redisPort, mediaEncoder);
 
   jobRunner.start();
 

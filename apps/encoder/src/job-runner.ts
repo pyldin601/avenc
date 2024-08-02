@@ -1,10 +1,16 @@
 import makeDebug from "debug";
 import { Queue, Worker } from "bullmq";
+import { MediaEncoder } from "./media-encoder";
 
 const debug = makeDebug("JobRunner");
 
 interface Job {
   id: string;
+  srcUrl: string;
+  srcExt: string;
+  dstUrl: string;
+  encodingFormat: "mp3";
+  audioBitrate: number | null;
 }
 
 const ENCODING_JOBS_QUEUE = "avenc:Encoding";
@@ -12,18 +18,19 @@ const ENCODING_JOBS_QUEUE = "avenc:Encoding";
 export class JobRunner {
   private encodingWorkers: Array<Worker<Job>> = [];
 
-  public static async create(redisHost: string, redisPort: number): Promise<JobRunner> {
+  public static async create(redisHost: string, redisPort: number, mediaEncoder: MediaEncoder): Promise<JobRunner> {
     const encodingQueue = new Queue<Job>(ENCODING_JOBS_QUEUE, {
       connection: { host: redisHost, port: redisPort },
     });
 
-    return new JobRunner(redisHost, redisPort, encodingQueue);
+    return new JobRunner(redisHost, redisPort, encodingQueue, mediaEncoder);
   }
 
   constructor(
     private readonly redisHost: string,
     private readonly redisPort: number,
     private readonly queue: Queue<Job>,
+    private readonly mediaEncoder: MediaEncoder,
   ) {}
 
   public async addJob(job: Job): Promise<void> {
@@ -47,7 +54,16 @@ export class JobRunner {
   }
 
   private async handleJob(job: Job): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await this.mediaEncoder.encode(
+      job.srcUrl,
+      job.dstUrl,
+      job.srcExt,
+      {
+        encodingFormat: job.encodingFormat,
+        audioBitrate: job.audioBitrate,
+      },
+      { encodingJobId: job.id },
+    );
   }
 
   public async close() {

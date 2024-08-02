@@ -5,13 +5,9 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
 
-enum EncodingFormat {
-  MP3 = "MP3",
-}
-
 interface EncodingParams {
-  format: EncodingFormat;
-  bitrate: number | null;
+  encodingFormat: "mp3";
+  audioBitrate: number | null;
 }
 
 interface EncodingContext {
@@ -23,7 +19,7 @@ export class MediaEncoder {
 
   public async encode(
     srcUrl: string,
-    destUrl: string,
+    dstUrl: string,
     // For hinting dummy decoders if they can't recognize the source file format without knowing file extension.
     srcExt: string,
     params: EncodingParams,
@@ -42,15 +38,15 @@ export class MediaEncoder {
     await finished(Readable.fromWeb(srcRes.body).pipe(fileStream));
 
     // Encode file
-    const destFile = path.join(tmpDir, `output`);
+    const dstFile = path.join(tmpDir, `output`);
     // TODO ffmpeg: Encode file with desired encoding params
 
     // Upload results to dest url
-    const stats = await stat(destFile);
+    const stats = await stat(dstFile);
     const fileSizeInBytes = stats.size;
 
-    const readStream = fs.createReadStream(destFile);
-    await fetch(destFile, {
+    const readStream = fs.createReadStream(dstFile);
+    await fetch(dstUrl, {
       method: "put",
       headers: {
         "Content-Length": `${fileSizeInBytes}`,
