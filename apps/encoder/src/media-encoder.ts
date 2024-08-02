@@ -23,7 +23,7 @@ interface EncodingContext {
 }
 
 export class MediaEncoder {
-  public static async create(pathToFfmpeg: string, redisHost: string, redisPort: number) {
+  public static create(pathToFfmpeg: string, redisHost: string, redisPort: number) {
     const redisClient = new Redis(redisPort, redisHost);
 
     return new MediaEncoder(pathToFfmpeg, redisClient);
