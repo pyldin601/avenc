@@ -37,6 +37,7 @@ export class MediaEncoder {
     const dstFile = path.join(tmpDir, `output`);
     await this.encodeFileUsingFfmpeg(sourceFile, dstFile, params, ctx);
 
+    // Upload encoded file
     await this.uploadFile(dstFile, dstUrl);
 
     // Cleanup created files and directories
