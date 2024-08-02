@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
+import fluentFfmpeg from "fluent-ffmpeg";
 
 interface EncodingParams {
   encodingFormat: "mp3";
@@ -39,7 +40,23 @@ export class MediaEncoder {
 
     // Encode file
     const dstFile = path.join(tmpDir, `output`);
-    // TODO ffmpeg: Encode file with desired encoding params
+    await new Promise<void>((resolve, reject) => {
+      const command = fluentFfmpeg(sourceFile).format(params.encodingFormat);
+
+      if (params.audioBitrate) {
+        command.audioBitrate(params.audioBitrate);
+      }
+
+      command
+        .output(dstFile)
+        .on("error", (error) => reject(error))
+        .on("end", () => resolve())
+        .on("progress", (progress) => {
+          // TODO Publish encoding progress progress
+          console.log("progress", progress);
+        })
+        .run();
+    });
 
     // Upload results to dest url
     const stats = await stat(dstFile);

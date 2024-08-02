@@ -13,6 +13,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/debug": "^4.1.12",
+    "@types/fluent-ffmpeg": "^2.1.25",
     "@types/node": "^22.0.2",
     "@types/uuid": "^10.0.0",
     "ts-node": "^10.9.2",
