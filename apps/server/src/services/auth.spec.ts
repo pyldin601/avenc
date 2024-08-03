@@ -26,7 +26,7 @@ afterEach(async () => {
 });
 
 describe("Sign Up", () => {
-  it("Should return user ID if user successfully signed up", async () => {
+  it("returns user ID if user successfully signs up", async () => {
     const userId = await authService.signUpWithEmailAndPassword("test@email.com", "testPassword");
 
     expect(userId).toEqual({
