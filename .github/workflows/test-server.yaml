@@ -3,6 +3,7 @@ name: Run tests in @avenc/server
 on:
   push:
     paths:
+      - '*'
       - apps/server
       - libs/server-libs
   pull_request:
