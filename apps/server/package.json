@@ -4,17 +4,22 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "start": "ts-node src/index.ts"
+    "start": "node dist/src/index.js",
+    "dev": "dotenvx run -- ts-node src/index.ts",
+    "build": "tsc --build tsconfig.json",
+    "clean": "tsc --build tsconfig.json --clean"
   },
   "author": "Roman Lakhtadyr <roman.lakhtadyr@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "@dotenvx/dotenvx": "^1.6.4",
     "@types/node": "^22.0.2",
-    "typescript": "^5.5.4",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
   },
   "dependencies": {
-    "zod": "^3.23.8",
-    "@avenc/server-libs": "*"
+    "@avenc/server-libs": "*",
+    "ioredis": "^5.4.1",
+    "zod": "^3.23.8"
   }
 }
