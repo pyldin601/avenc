@@ -4,16 +4,28 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "start": "ts-node src/index.ts"
+    "start": "node dist/src/index.ts",
+    "dev": "ts-node src/index.ts",
+    "build": "tsc --build tsconfig.json",
+    "clean": "tsc --build tsconfig.json --clean"
   },
   "author": "Roman Lakhtadyr <roman.lakhtadyr@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "@types/debug": "^4.1.12",
+    "@types/fluent-ffmpeg": "^2.1.25",
     "@types/node": "^22.0.2",
-    "typescript": "^5.5.4",
-    "ts-node": "^10.9.2"
+    "@types/uuid": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "bullmq": "^5.12.0",
+    "debug": "^4.3.6",
+    "fluent-ffmpeg": "^2.1.3",
+    "ioredis": "^5.4.1",
+    "tmp": "^0.2.3",
+    "zod": "^3.23.8",
+    "@avenc/server-libs": "*"
   }
 }

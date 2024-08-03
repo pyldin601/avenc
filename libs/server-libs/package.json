@@ -1,0 +1,18 @@
+{
+  "name": "@avenc/server-libs",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "build": "tsc --build tsconfig.json",
+    "clean": "tsc --build tsconfig.json --clean"
+  },
+  "author": "Roman Lakhtadyr <roman.lakhtadyr@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {}
+}
