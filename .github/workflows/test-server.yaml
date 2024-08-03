@@ -2,13 +2,17 @@ name: Run tests in @avenc/server
 
 on:
   push:
-    paths:
-      - apps/server
-      - libs/server-libs
-  pull_request:
-    paths:
-      - apps/server
-      - libs/server-libs
+    branches:
+      - '*'
+#    paths:
+#      - apps/server
+#      - libs/server-libs
+#      - package-lock.json
+#  pull_request:
+#    paths:
+#      - apps/server
+#      - libs/server-libs
+#      - package-lock.json
 
 jobs:
   test:
