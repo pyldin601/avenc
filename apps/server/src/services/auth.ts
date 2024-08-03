@@ -26,21 +26,37 @@ export class RedisBackedAuthService implements AuthService {
   constructor(private readonly redisClient: Redis) {}
 
   public async signUpWithEmailAndPassword(email: string, password: string): Promise<UserId> {
+    // Generate a unique user ID
     const userId = randomUUID();
 
+    // Hash the email
     const emailHash = HashUtils.hashEmail(email);
-    const emailHashKey = RedisKeys.EMAIL_HASH_KEY.replace("{emailHash}", emailHash);
-    const result = await this.redisClient.set(emailHashKey, userId, "NX");
 
+    // Create a Redis key for storing the email hash
+    const emailHashKey = RedisKeys.EMAIL_HASH_KEY.replace("{emailHash}", emailHash);
+
+    // Attempt to set the email hash key with the user ID in Redis, with an expiration of 5 seconds
+    // The "NX" option ensures that the key is only set if it does not already exist
+    const result = await this.redisClient.set(emailHashKey, userId, "EX", 5, "NX");
+
+    // If the result is null, the email already exists in Redis, indicating a duplicate registration
     if (result === null) {
       throw new Error("User with given email already exists");
     }
 
+    // Hash the password using a secure hashing function
     const passwordHash = await HashUtils.hashPassword(password);
 
+    // Create a Redis key for storing user details using the generated user ID
     const redisKey = RedisKeys.USER_KEY.replace("{userId}", userId);
+
+    // Store the user's email and hashed password in a Redis hash
     await this.redisClient.hmset(redisKey, "email", email, "password_hash", passwordHash);
 
+    // Set the email hash key with the user ID to persist the user record in Redis
+    await this.redisClient.set(emailHashKey, userId);
+
+    // Return the user ID wrapped in an object
     return { value: userId };
   }
 }
