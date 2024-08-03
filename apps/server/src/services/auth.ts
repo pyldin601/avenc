@@ -153,6 +153,7 @@ export class RedisBackedAuthService implements AuthService {
     }
 
     await this.redisClient.set(resetTokenKey, maybeUserId, "PX", ms(this.config.resetPasswordTokenTtl));
+    // TODO Maybe move this queue out of the auth service?
     await this.emailQueue.add("sendEmail", { type: "resetPasswordRequest", email, resetToken });
 
     return resetToken;
