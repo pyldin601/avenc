@@ -27,10 +27,16 @@ afterEach(async () => {
 
 describe("Sign Up", () => {
   it("returns user ID if user successfully signs up", async () => {
-    const userId = await authService.signUpWithEmailAndPassword("test@email.com", "testPassword");
-
-    expect(userId).toEqual({
+    await expect(authService.signUpWithEmailAndPassword("test@email.com", "testPassword")).resolves.toEqual({
       value: expect.any(String),
     });
+  });
+
+  it("fails if user with given email already exists", async () => {
+    await authService.signUpWithEmailAndPassword("test@email.com", "testPassword");
+
+    await expect(authService.signUpWithEmailAndPassword("test@email.com", "testPassword2")).rejects.toThrow(
+      "User with given email already exists",
+    );
   });
 });
