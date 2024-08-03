@@ -1,25 +1,37 @@
+import { EmailQueueJob, RedisKeys } from "@avenc/server-libs";
 import RedisMemoryServer from "redis-memory-server";
 import { AuthService, RedisBackedAuthService } from "./auth";
 import { describe } from "node:test";
 import jwt from "jsonwebtoken";
+import Redis from "ioredis";
+import { Queue, Worker } from "bullmq";
 
 const redisServer = new RedisMemoryServer();
 
 let authService: AuthService;
+let redisClient: Redis;
+let emailQueue: Queue<EmailQueueJob>;
 
 beforeEach(async () => {
   const redisPort = await redisServer.getPort();
   const redisHost = await redisServer.getHost();
 
-  authService = RedisBackedAuthService.create(redisHost, redisPort, {
+  redisClient = new Redis(redisPort, redisHost, { maxRetriesPerRequest: null });
+  emailQueue = new Queue<EmailQueueJob>(RedisKeys.SEND_EMAIL_KEY, {
+    connection: redisClient,
+  });
+
+  authService = new RedisBackedAuthService(redisClient, emailQueue, {
     refreshTokenTtl: "10m",
     accessTokenTtl: "5m",
+    resetPasswordTokenTtl: "5m",
     jwtSecretKey: "jwtSecretKey",
   });
 });
 
 afterEach(async () => {
-  await authService.disconnect();
+  await emailQueue.close();
+  redisClient.disconnect();
   await redisServer.stop();
 });
 
@@ -87,5 +99,35 @@ describe("refresh token", () => {
     const { accessToken } = await authService.refreshAuthToken(refreshToken);
 
     expect(authService.getUserId(accessToken)).resolves.toEqual(userId);
+  });
+});
+
+describe("reset password token", () => {
+  it("sends email with reset token on request to reset password token", async () => {
+    jest.setTimeout(5_000);
+
+    await authService.signUpWithEmailAndPassword("test@email.com", "testPassword");
+
+    await authService.requestPasswordReset("test@email.com");
+
+    const job = await new Promise((resolve, reject) => {
+      const worker = new Worker<EmailQueueJob>(
+        RedisKeys.SEND_EMAIL_KEY,
+        async (job) => {
+          resolve(job.data);
+
+          await worker.close(true);
+        },
+        { connection: redisClient },
+      );
+
+      worker.on("error", reject);
+    });
+
+    expect(job).toEqual({
+      email: "test@email.com",
+      resetToken: expect.any(String),
+      type: "resetPasswordRequest",
+    });
   });
 });

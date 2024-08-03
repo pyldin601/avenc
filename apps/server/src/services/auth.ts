@@ -24,6 +24,7 @@ export interface AuthServiceConfig {
   jwtSecretKey: string;
   accessTokenTtl: string;
   refreshTokenTtl: string;
+  resetPasswordTokenTtl: string;
 }
 
 export abstract class AuthService {
@@ -39,14 +40,6 @@ export abstract class AuthService {
 }
 
 export class RedisBackedAuthService implements AuthService {
-  public static create(redisHost: string, redisPort: number, config: AuthServiceConfig): AuthService {
-    const redisClient = new Redis(redisPort, redisHost);
-    const emailQueue = new Queue<EmailQueueJob>(RedisKeys.SEND_EMAIL_KEY, {
-      connection: redisClient,
-    });
-
-    return new RedisBackedAuthService(redisClient, emailQueue, config);
-  }
   constructor(
     private readonly redisClient: Redis,
     private readonly emailQueue: Queue<EmailQueueJob>,
@@ -146,7 +139,11 @@ export class RedisBackedAuthService implements AuthService {
   }
 
   public async requestPasswordReset(email: string): Promise<void> {
-    throw new Error("Unimplemented");
+    const resetToken = randomBytes(256).toString("base64");
+    const resetTokenKey = RedisKeys.RESET_TOKEN_KEY.replace("{resetToken}", resetToken);
+
+    await this.redisClient.set(resetTokenKey, resetToken, "PX", ms(this.config.resetPasswordTokenTtl));
+    await this.emailQueue.add("sendEmail", { type: "resetPasswordRequest", email, resetToken });
   }
 
   public async resetPassword(resetToken: string, newPassword: string): Promise<void> {
