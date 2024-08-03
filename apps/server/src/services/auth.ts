@@ -126,6 +126,31 @@ export class RedisBackedAuthService implements AuthService {
     return { accessToken, refreshToken };
   }
 
+  public async requestPasswordReset(email: string): Promise<void> {
+    throw new Error("Unimplemented");
+  }
+
+  public async resetPassword(resetToken: string, newPassword: string): Promise<void> {
+    throw new Error("Unimplemented");
+  }
+
+  public async logout(accessToken: string): Promise<void> {
+    throw new Error("Unimplemented");
+  }
+
+  public async logoutEverywhere(): Promise<void> {
+    throw new Error("Unimplemented");
+  }
+
+  public async getUserId(accessToken: string): Promise<UserId> {
+    const payload = jwt.verify(accessToken, this.config.jwtSecretKey);
+    if (typeof payload.sub !== "string") {
+      throw new Error("Invalid token");
+    }
+
+    return { value: payload.sub };
+  }
+
   private makeAccessToken(userId: string): string {
     return jwt.sign({ sub: userId }, this.config.jwtSecretKey, {
       expiresIn: this.config.accessTokenTtl,
