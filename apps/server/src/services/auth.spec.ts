@@ -1,6 +1,7 @@
 import RedisMemoryServer from "redis-memory-server";
 import { AuthService, RedisBackedAuthService } from "./auth";
 import Redis from "ioredis";
+import { describe } from "node:test";
 
 const redisServer = new RedisMemoryServer();
 
@@ -25,8 +26,8 @@ afterEach(async () => {
   await redisServer.stop();
 });
 
-describe("Sign Up", () => {
-  it("returns user ID if user successfully signs up", async () => {
+describe("sign up", () => {
+  it("returns user ID if user successfully signed up", async () => {
     await expect(authService.signUpWithEmailAndPassword("test@email.com", "testPassword")).resolves.toEqual({
       value: expect.any(String),
     });
@@ -37,6 +38,28 @@ describe("Sign Up", () => {
 
     await expect(authService.signUpWithEmailAndPassword("test@email.com", "testPassword2")).rejects.toThrow(
       "User with given email already exists",
+    );
+  });
+});
+
+describe("login", () => {
+  it("returns refresh and access tokens if user successfully logged in", async () => {
+    await authService.signUpWithEmailAndPassword("test@email.com", "testPassword");
+
+    await expect(authService.loginByEmailAndPassword("test@email.com", "testPassword")).resolves.toEqual({
+      accessToken: expect.any(String),
+      refreshToken: expect.any(String),
+    });
+  });
+
+  it("fails if email or password is not valid", async () => {
+    await authService.signUpWithEmailAndPassword("test@email.com", "testPassword");
+
+    await expect(authService.loginByEmailAndPassword("wrong@email.com", "testPassword")).rejects.toThrow(
+      "Incorrect email or password",
+    );
+    await expect(authService.loginByEmailAndPassword("test@email.com", "wrongPassword")).rejects.toThrow(
+      "Incorrect email or password",
     );
   });
 });

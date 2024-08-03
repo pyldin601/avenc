@@ -1,11 +1,13 @@
 import { HashUtils, RedisKeys } from "@avenc/server-libs";
 import { randomBytes, randomUUID } from "node:crypto";
-import Redis from "ioredis";
 import jwt from "jsonwebtoken";
+import Redis from "ioredis";
 import ms from "ms";
-import { undefined } from "zod";
 
 const REFRESH_TOKEN_BYTES_SIZE = 256;
+
+const PASSWORD_HASH_FIELD = "password_hash";
+const EMAIL_FIELD = "email";
 
 export interface AuthToken {
   accessToken: string;
@@ -65,7 +67,7 @@ export class RedisBackedAuthService implements AuthService {
     const redisKey = RedisKeys.USER_KEY.replace("{userId}", userId);
 
     // Store the user's email and hashed password in a Redis hash
-    await this.redisClient.hmset(redisKey, "email", email, "password_hash", passwordHash);
+    await this.redisClient.hmset(redisKey, EMAIL_FIELD, email, PASSWORD_HASH_FIELD, passwordHash);
 
     // Return the user ID wrapped in an object
     return { value: userId };
@@ -85,11 +87,16 @@ export class RedisBackedAuthService implements AuthService {
       throw new Error("Incorrect email or password");
     }
 
-    // Check if the users active)
+    // Check if the users active
     const userKey = RedisKeys.USER_KEY.replace("{userId}", maybeUserId);
-    const isActive = Boolean(await this.redisClient.exists(userKey));
+    const [passwordHash] = await this.redisClient.hmget(userKey, PASSWORD_HASH_FIELD);
 
-    if (!isActive) {
+    if (!passwordHash) {
+      throw new Error("Incorrect email or password");
+    }
+
+    // Check password
+    if (!(await HashUtils.verifyPassword(passwordHash, password))) {
       throw new Error("Incorrect email or password");
     }
 
