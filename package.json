@@ -10,7 +10,8 @@
   "license": "MIT",
   "workspaces": [
     "apps/server",
-    "apps/encoder"
+    "apps/encoder",
+    "libs/server-libs"
   ],
   "devDependencies": {
     "@eslint/js": "^9.8.0",

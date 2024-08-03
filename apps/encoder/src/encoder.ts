@@ -1,17 +1,16 @@
+import { RedisKeys } from "@avenc/server-libs";
+import fluentFfmpeg from "fluent-ffmpeg";
+import makeDebug from "debug";
+import Redis from "ioredis";
 import fs from "node:fs";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
-import fluentFfmpeg from "fluent-ffmpeg";
-import makeDebug from "debug";
-import Redis from "ioredis";
 import { EncodingStatuses } from "./statuses";
 
 const debug = makeDebug("MediaEncoder");
-
-const ENCODER_EVENTS_KEY = "avenc:encoder:events";
 
 interface EncodingParams {
   encodingFormat: "mp3";
@@ -19,7 +18,8 @@ interface EncodingParams {
 }
 
 interface EncodingContext {
-  encodingJobId: string;
+  jobId: string;
+  userId: string;
 }
 
 export class MediaEncoder {
@@ -122,15 +122,15 @@ export class MediaEncoder {
         .output(dstFile)
         .on("end", () => resolve())
         .on("error", (error) => reject(error))
-        .on("progress", (progress) => {
-          onProgress(progress.percent ?? 0);
-        })
+        .on("progress", ({ percent }) => onProgress(percent ?? 0))
         .setFfmpegPath(this.pathToFfmpeg)
         .run();
     });
   }
 
-  private async sendEncodingStatus(status: EncodingStatuses, { encodingJobId }: EncodingContext) {
-    await this.redisClient.xadd(ENCODER_EVENTS_KEY, "*", "jobId", encodingJobId, "event", JSON.stringify(status));
+  private async sendEncodingStatus(status: EncodingStatuses, { jobId, userId }: EncodingContext) {
+    const redisKey = RedisKeys.ENCODER_EVENTS_KEY.replace("{userId}", userId);
+
+    await this.redisClient.xadd(redisKey, "*", "jobId", jobId, "event", JSON.stringify(status));
   }
 }

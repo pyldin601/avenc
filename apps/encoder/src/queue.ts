@@ -1,3 +1,4 @@
+import { RedisKeys } from "@avenc/server-libs";
 import makeDebug from "debug";
 import { Queue, Worker } from "bullmq";
 import { MediaEncoder } from "./encoder";
@@ -6,6 +7,7 @@ const debug = makeDebug("JobRunner");
 
 interface Job {
   id: string;
+  userId: string;
   srcUrl: string;
   srcExt: string;
   dstUrl: string;
@@ -13,13 +15,11 @@ interface Job {
   audioBitrate: number | null;
 }
 
-const ENCODING_JOBS_QUEUE = "avenc:encoder:queue";
-
 export class JobRunner {
   private encodingWorkers: Array<Worker<Job>> = [];
 
   public static async create(redisHost: string, redisPort: number, mediaEncoder: MediaEncoder): Promise<JobRunner> {
-    const encodingQueue = new Queue<Job>(ENCODING_JOBS_QUEUE, {
+    const encodingQueue = new Queue<Job>(RedisKeys.ENCODER_QUEUE_KEY, {
       connection: { host: redisHost, port: redisPort },
     });
 
@@ -34,18 +34,20 @@ export class JobRunner {
   ) {}
 
   public async addJob(job: Job): Promise<void> {
-    // TODO Probe file before sending to encoder
     debug("Adding new encoding job", job);
-    await this.queue.add(ENCODING_JOBS_QUEUE, job, { attempts: 1 });
+    await this.queue.add(RedisKeys.ENCODER_QUEUE_KEY, job);
   }
 
+  //
+  // Multiple calls to start() start multiple parallel workers.
+  //
   public start() {
     this.encodingWorkers.push(
       new Worker<Job>(
-        ENCODING_JOBS_QUEUE,
-        async (job) => {
+        RedisKeys.ENCODER_QUEUE_KEY,
+        (job) => {
           debug("Consuming a new encoding job", job.data);
-          await this.handleJob(job.data);
+          return this.handleJob(job.data);
         },
         {
           connection: { host: this.redisHost, port: this.redisPort },
@@ -63,7 +65,10 @@ export class JobRunner {
         encodingFormat: job.encodingFormat,
         audioBitrate: job.audioBitrate,
       },
-      { encodingJobId: job.id },
+      {
+        jobId: job.id,
+        userId: job.userId,
+      },
     );
   }
 
