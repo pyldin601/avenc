@@ -1,7 +1,7 @@
 import { Config } from "./config";
 import { MediaConvertClient, S3Client } from "./aws-clients";
+import { RedisBackedAuthService } from "./services/auth";
 import Redis from "ioredis";
-import { AuthService, RedisBackedAuthService } from "./services/auth";
 
 export async function main(env: NodeJS.ProcessEnv) {
   const config = Config.fromEnv(env);
