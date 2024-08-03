@@ -7,6 +7,12 @@ on:
       - libs/**
       - package-lock.json
       - .github/workflows/test-server.yaml
+  pull_request:
+    paths:
+      - apps/server/**
+      - libs/**
+      - package-lock.json
+      - .github/workflows/test-server.yaml
 
 jobs:
   test:
