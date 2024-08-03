@@ -130,4 +130,10 @@ describe("reset password token", () => {
       type: "resetPasswordRequest",
     });
   });
+
+  it("fails if wrong email", async () => {
+    await expect(authService.requestPasswordReset("wrong@email.com")).rejects.toThrow(
+      "User with given email does not exist",
+    );
+  });
 });

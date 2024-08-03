@@ -142,7 +142,17 @@ export class RedisBackedAuthService implements AuthService {
     const resetToken = randomBytes(256).toString("base64");
     const resetTokenKey = RedisKeys.RESET_TOKEN_KEY.replace("{resetToken}", resetToken);
 
-    await this.redisClient.set(resetTokenKey, resetToken, "PX", ms(this.config.resetPasswordTokenTtl));
+    // Check user ID
+    const emailHash = HashUtils.hashEmail(email);
+    const emailHashKey = RedisKeys.EMAIL_HASH_KEY.replace("{emailHash}", emailHash);
+    const maybeUserId = await this.redisClient.get(emailHashKey);
+
+    // Fail if user with given email does not exist
+    if (maybeUserId === null) {
+      throw new Error("User with given email does not exist");
+    }
+
+    await this.redisClient.set(resetTokenKey, maybeUserId, "PX", ms(this.config.resetPasswordTokenTtl));
     await this.emailQueue.add("sendEmail", { type: "resetPasswordRequest", email, resetToken });
   }
 
