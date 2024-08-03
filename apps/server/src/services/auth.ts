@@ -1,6 +1,10 @@
 import { HashUtils, RedisKeys } from "@avenc/server-libs";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import Redis from "ioredis";
+import jwt from "jsonwebtoken";
+import ms from "ms";
+
+const REFRESH_TOKEN_BYTES_SIZE = 256;
 
 export interface AuthToken {
   accessToken: string;
@@ -9,6 +13,12 @@ export interface AuthToken {
 
 export interface UserId {
   value: string;
+}
+
+export interface AuthServiceConfig {
+  jwtSecretKey: string;
+  accessTokenTtl: string;
+  refreshTokenTtl: string;
 }
 
 export abstract class AuthService {
@@ -23,7 +33,10 @@ export abstract class AuthService {
 }
 
 export class RedisBackedAuthService implements AuthService {
-  constructor(private readonly redisClient: Redis) {}
+  constructor(
+    private readonly redisClient: Redis,
+    private readonly config: AuthServiceConfig,
+  ) {}
 
   public async signUpWithEmailAndPassword(email: string, password: string): Promise<UserId> {
     // Generate a unique user ID
@@ -55,5 +68,53 @@ export class RedisBackedAuthService implements AuthService {
 
     // Return the user ID wrapped in an object
     return { value: userId };
+  }
+
+  public async loginByEmailAndPassword(email: string, password: string): Promise<AuthToken> {
+    // Hash the email
+    const emailHash = HashUtils.hashEmail(email);
+
+    // Create a Redis key for storing the email hash
+    const emailHashKey = RedisKeys.EMAIL_HASH_KEY.replace("{emailHash}", emailHash);
+
+    // Get the user ID associated with the given email hash
+    const maybeUserId = await this.redisClient.get(emailHashKey);
+
+    if (maybeUserId === null) {
+      throw new Error("Incorrect email or password");
+    }
+
+    // Check if the users active)
+    const userKey = RedisKeys.USER_KEY.replace("{userId}", maybeUserId);
+    const isActive = Boolean(await this.redisClient.exists(userKey));
+
+    if (!isActive) {
+      throw new Error("Incorrect email or password");
+    }
+
+    // Generate access and refresh tokens
+    const accessToken = this.makeAccessToken(maybeUserId);
+    const refreshToken = this.makeRefreshToken();
+
+    await this.storeRefreshToken(maybeUserId, refreshToken);
+
+    return { accessToken, refreshToken };
+  }
+
+  private makeAccessToken(userId: string): string {
+    return jwt.sign({ sub: userId }, this.config.jwtSecretKey, {
+      expiresIn: this.config.accessTokenTtl,
+    });
+  }
+
+  private makeRefreshToken(): string {
+    return randomBytes(REFRESH_TOKEN_BYTES_SIZE).toString("base64");
+  }
+
+  private async storeRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    const refreshTokenTtlSeconds = ms(this.config.refreshTokenTtl) / 1000;
+    const refreshTokenKey = RedisKeys.REFRESH_TOKEN_KEY.replace("{refreshToken}", refreshToken);
+
+    this.redisClient.set(refreshTokenKey, userId, "EX", refreshTokenTtlSeconds);
   }
 }

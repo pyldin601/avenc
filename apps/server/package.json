@@ -13,6 +13,7 @@
   "license": "MIT",
   "devDependencies": {
     "@dotenvx/dotenvx": "^1.6.4",
+    "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^22.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
@@ -20,6 +21,8 @@
   "dependencies": {
     "@avenc/server-libs": "*",
     "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "ms": "^2.1.3",
     "zod": "^3.23.8"
   }
 }
