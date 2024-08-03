@@ -3,23 +3,27 @@ name: Run tests in @avenc/server
 on:
   push:
     branches:
-      - '*'
-#    paths:
-#      - apps/server
-#      - libs/server-libs
-#      - package-lock.json
-#  pull_request:
-#    paths:
-#      - apps/server
-#      - libs/server-libs
-#      - package-lock.json
+      - main
+    paths:
+      - apps/server/**
+      - libs/**
+      - package-lock.json
+      - .github/workflows/test-server.yaml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - apps/server/**
+      - libs/**
+      - package-lock.json
+      - .github/workflows/test-server.yaml
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -29,7 +33,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --prefix apps/server
+        run: npm i --workspace @avenc/server
 
       - name: Run tests
-        run: npm test --prefix apps/server
+        run: npm test --workspace @avenc/server
