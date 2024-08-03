@@ -2,6 +2,7 @@ import RedisMemoryServer from "redis-memory-server";
 import { AuthService, RedisBackedAuthService } from "./auth";
 import Redis from "ioredis";
 import { describe } from "node:test";
+import jwt from "jsonwebtoken";
 
 const redisServer = new RedisMemoryServer();
 
@@ -61,5 +62,23 @@ describe("login", () => {
     await expect(authService.loginByEmailAndPassword("test@email.com", "wrongPassword")).rejects.toThrow(
       "Incorrect email or password",
     );
+  });
+});
+
+describe("access token", () => {
+  it("contains user ID in access token", async () => {
+    const userId = await authService.signUpWithEmailAndPassword("test@email.com", "testPassword");
+    const { accessToken } = await authService.loginByEmailAndPassword("test@email.com", "testPassword");
+
+    await expect(authService.getUserId(accessToken)).resolves.toEqual(userId);
+  });
+
+  it("contains correct expiration date", async () => {
+    await authService.signUpWithEmailAndPassword("test@email.com", "testPassword");
+    const { accessToken } = await authService.loginByEmailAndPassword("test@email.com", "testPassword");
+
+    const payload = jwt.decode(accessToken) as { iat: number; exp: number };
+
+    expect(payload.exp - payload.iat).toBe(300);
   });
 });
