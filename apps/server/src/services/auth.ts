@@ -1,8 +1,10 @@
-import { HashUtils, RedisKeys } from "@avenc/server-libs";
+import { EmailQueueJob, HashUtils, RedisKeys } from "@avenc/server-libs";
 import { randomBytes, randomUUID } from "node:crypto";
 import jwt from "jsonwebtoken";
 import Redis from "ioredis";
 import ms from "ms";
+import { Queue } from "bullmq";
+import { undefined } from "zod";
 
 const REFRESH_TOKEN_BYTES_SIZE = 256;
 
@@ -33,11 +35,21 @@ export abstract class AuthService {
   abstract logout(accessToken: string): Promise<void>;
   abstract logoutEverywhere(): Promise<void>;
   abstract getUserId(accessToken: string): Promise<UserId>;
+  abstract disconnect(): Promise<void>;
 }
 
 export class RedisBackedAuthService implements AuthService {
+  public static create(redisHost: string, redisPort: number, config: AuthServiceConfig): AuthService {
+    const redisClient = new Redis(redisPort, redisHost);
+    const emailQueue = new Queue<EmailQueueJob>(RedisKeys.SEND_EMAIL_KEY, {
+      connection: redisClient,
+    });
+
+    return new RedisBackedAuthService(redisClient, emailQueue, config);
+  }
   constructor(
     private readonly redisClient: Redis,
+    private readonly emailQueue: Queue<EmailQueueJob>,
     private readonly config: AuthServiceConfig,
   ) {}
 
@@ -156,6 +168,11 @@ export class RedisBackedAuthService implements AuthService {
     }
 
     return { value: payload.sub };
+  }
+
+  public async disconnect(): Promise<void> {
+    this.redisClient.disconnect();
+    await this.emailQueue.disconnect();
   }
 
   private makeAccessToken(userId: string): string {

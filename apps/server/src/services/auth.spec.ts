@@ -1,21 +1,17 @@
 import RedisMemoryServer from "redis-memory-server";
 import { AuthService, RedisBackedAuthService } from "./auth";
-import Redis from "ioredis";
 import { describe } from "node:test";
 import jwt from "jsonwebtoken";
 
 const redisServer = new RedisMemoryServer();
 
-let redisClient: Redis;
 let authService: AuthService;
 
 beforeEach(async () => {
   const redisPort = await redisServer.getPort();
   const redisHost = await redisServer.getHost();
 
-  redisClient = new Redis(redisPort, redisHost);
-
-  authService = new RedisBackedAuthService(redisClient, {
+  authService = RedisBackedAuthService.create(redisHost, redisPort, {
     refreshTokenTtl: "10m",
     accessTokenTtl: "5m",
     jwtSecretKey: "jwtSecretKey",
@@ -23,7 +19,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  redisClient.disconnect();
+  await authService.disconnect();
   await redisServer.stop();
 });
 
