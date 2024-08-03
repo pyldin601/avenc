@@ -6,7 +6,8 @@
   "main": "dist/src/index.js",
   "scripts": {
     "build": "tsc --build tsconfig.json",
-    "clean": "tsc --build tsconfig.json --clean"
+    "clean": "tsc --build tsconfig.json --clean",
+    "postinstall": "npm run build"
   },
   "author": "Roman Lakhtadyr <roman.lakhtadyr@gmail.com>",
   "license": "MIT",
