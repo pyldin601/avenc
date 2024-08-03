@@ -115,3 +115,14 @@ describe("reset password", () => {
     );
   });
 });
+
+describe("logout", () => {
+  it("logout successfully", async () => {
+    await authService.signUpWithEmailAndPassword("test@email.com", "testPassword");
+    const { refreshToken } = await authService.loginByEmailAndPassword("test@email.com", "testPassword");
+
+    await expect(authService.logout(refreshToken)).resolves.toBeUndefined();
+
+    await expect(authService.refreshAuthToken(refreshToken)).rejects.toThrow("Incorrect refresh token");
+  });
+});

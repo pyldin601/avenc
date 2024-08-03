@@ -32,7 +32,7 @@ export abstract class AuthService {
   abstract requestPasswordReset(email: string): Promise<string>;
   abstract resetPassword(resetToken: string, newPassword: string): Promise<void>;
   abstract logout(accessToken: string): Promise<void>;
-  abstract logoutEverywhere(): Promise<void>;
+  abstract logoutEveryWhere(): Promise<void>;
   abstract getUserId(accessToken: string): Promise<UserId>;
 }
 
@@ -170,11 +170,12 @@ export class RedisBackedAuthService implements AuthService {
     }
   }
 
-  public async logout(accessToken: string): Promise<void> {
-    throw new Error("Unimplemented");
+  public async logout(refreshToken: string): Promise<void> {
+    const refreshTokenKey = RedisKeys.REFRESH_TOKEN_KEY.replace("{refreshToken}", refreshToken);
+    await this.redisClient.del(refreshTokenKey);
   }
 
-  public async logoutEverywhere(): Promise<void> {
+  public async logoutEveryWhere(): Promise<void> {
     throw new Error("Unimplemented");
   }
 
