@@ -3,6 +3,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import Redis from "ioredis";
 import jwt from "jsonwebtoken";
 import ms from "ms";
+import { undefined } from "zod";
 
 const REFRESH_TOKEN_BYTES_SIZE = 256;
 
@@ -97,6 +98,30 @@ export class RedisBackedAuthService implements AuthService {
     const refreshToken = this.makeRefreshToken();
 
     await this.storeRefreshToken(maybeUserId, refreshToken);
+
+    return { accessToken, refreshToken };
+  }
+
+  public async refreshAuthToken(oldRefreshToken: string): Promise<AuthToken> {
+    const refreshTokenKey = RedisKeys.REFRESH_TOKEN_KEY.replace("{refreshToken}", oldRefreshToken);
+    const userId = await this.redisClient.get(refreshTokenKey);
+
+    if (!userId) {
+      throw new Error("Incorrect refresh token");
+    }
+
+    // Check if the user is still active
+    const userKey = RedisKeys.USER_KEY.replace("{userId}", userId);
+    const isActive = Boolean(await this.redisClient.exists(userKey));
+
+    if (!isActive) {
+      throw new Error("Incorrect refresh token");
+    }
+
+    const accessToken = this.makeAccessToken(userId);
+    const refreshToken = this.makeRefreshToken();
+
+    await this.storeRefreshToken(userId, refreshToken);
 
     return { accessToken, refreshToken };
   }
