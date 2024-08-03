@@ -31,7 +31,7 @@ export abstract class AuthService {
   abstract signUpWithEmailAndPassword(email: string, password: string): Promise<UserId>;
   abstract loginByEmailAndPassword(email: string, password: string): Promise<AuthToken>;
   abstract refreshAuthToken(refreshToken: string): Promise<AuthToken>;
-  abstract requestPasswordReset(email: string): Promise<void>;
+  abstract requestPasswordReset(email: string): Promise<string>;
   abstract resetPassword(resetToken: string, newPassword: string): Promise<void>;
   abstract logout(accessToken: string): Promise<void>;
   abstract logoutEverywhere(): Promise<void>;
@@ -138,7 +138,7 @@ export class RedisBackedAuthService implements AuthService {
     return { accessToken, refreshToken };
   }
 
-  public async requestPasswordReset(email: string): Promise<void> {
+  public async requestPasswordReset(email: string): Promise<string> {
     const resetToken = randomBytes(256).toString("base64");
     const resetTokenKey = RedisKeys.RESET_TOKEN_KEY.replace("{resetToken}", resetToken);
 
@@ -154,6 +154,8 @@ export class RedisBackedAuthService implements AuthService {
 
     await this.redisClient.set(resetTokenKey, maybeUserId, "PX", ms(this.config.resetPasswordTokenTtl));
     await this.emailQueue.add("sendEmail", { type: "resetPasswordRequest", email, resetToken });
+
+    return resetToken;
   }
 
   public async resetPassword(resetToken: string, newPassword: string): Promise<void> {
