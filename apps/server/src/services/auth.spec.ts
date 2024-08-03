@@ -125,4 +125,17 @@ describe("logout", () => {
 
     await expect(authService.refreshAuthToken(refreshToken)).rejects.toThrow("Incorrect refresh token");
   });
+
+  it("logout everywhere successfully", async () => {
+    await authService.signUpWithEmailAndPassword("test@email.com", "testPassword");
+    const { refreshToken: refreshToken1 } = await authService.loginByEmailAndPassword("test@email.com", "testPassword");
+    const { refreshToken: refreshToken2 } = await authService.loginByEmailAndPassword("test@email.com", "testPassword");
+    const { refreshToken: refreshToken3 } = await authService.loginByEmailAndPassword("test@email.com", "testPassword");
+
+    await authService.logoutEverywhere(refreshToken1);
+
+    await expect(authService.refreshAuthToken(refreshToken1)).rejects.toThrow("Incorrect refresh token");
+    await expect(authService.refreshAuthToken(refreshToken2)).rejects.toThrow("Incorrect refresh token");
+    await expect(authService.refreshAuthToken(refreshToken3)).rejects.toThrow("Incorrect refresh token");
+  });
 });

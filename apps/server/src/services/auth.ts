@@ -31,8 +31,8 @@ export abstract class AuthService {
   abstract refreshAuthToken(refreshToken: string): Promise<AuthToken>;
   abstract requestPasswordReset(email: string): Promise<string>;
   abstract resetPassword(resetToken: string, newPassword: string): Promise<void>;
-  abstract logout(accessToken: string): Promise<void>;
-  abstract logoutEveryWhere(): Promise<void>;
+  abstract logout(refreshToken: string): Promise<void>;
+  abstract logoutEverywhere(refreshToken: string): Promise<void>;
   abstract getUserId(accessToken: string): Promise<UserId>;
 }
 
@@ -107,6 +107,9 @@ export class RedisBackedAuthService implements AuthService {
 
     await this.storeRefreshToken(maybeUserId, refreshToken);
 
+    const sessionKey = RedisKeys.SESSIONS_KEY.replace("{userId}", maybeUserId);
+    await this.redisClient.zadd(sessionKey, Date.now(), refreshToken);
+
     return { accessToken, refreshToken };
   }
 
@@ -130,6 +133,10 @@ export class RedisBackedAuthService implements AuthService {
     const refreshToken = this.makeRefreshToken();
 
     await this.storeRefreshToken(userId, refreshToken);
+
+    const sessionKey = RedisKeys.SESSIONS_KEY.replace("{userId}", userId);
+    await this.redisClient.zadd(sessionKey, Date.now(), refreshToken);
+    await this.redisClient.zrem(sessionKey, oldRefreshToken);
 
     return { accessToken, refreshToken };
   }
@@ -172,11 +179,30 @@ export class RedisBackedAuthService implements AuthService {
 
   public async logout(refreshToken: string): Promise<void> {
     const refreshTokenKey = RedisKeys.REFRESH_TOKEN_KEY.replace("{refreshToken}", refreshToken);
+    const userId = await this.redisClient.get(refreshTokenKey);
+
+    if (!userId) {
+      return;
+    }
+
     await this.redisClient.del(refreshTokenKey);
+
+    const sessionKey = RedisKeys.SESSIONS_KEY.replace("{userId}", userId);
+    await this.redisClient.zrem(sessionKey, refreshToken);
   }
 
-  public async logoutEveryWhere(): Promise<void> {
-    throw new Error("Unimplemented");
+  public async logoutEverywhere(refreshToken: string): Promise<void> {
+    const refreshTokenKey = RedisKeys.REFRESH_TOKEN_KEY.replace("{refreshToken}", refreshToken);
+    const userId = await this.redisClient.get(refreshTokenKey);
+
+    if (!userId) {
+      return;
+    }
+
+    const sessionsKey = RedisKeys.SESSIONS_KEY.replace("{userId}", userId);
+    const sessions = await this.redisClient.zrange(sessionsKey, 0, -1);
+
+    await Promise.all(sessions.map((token) => this.logout(token)));
   }
 
   public async getUserId(accessToken: string): Promise<UserId> {
