@@ -6,11 +6,7 @@ on:
       - apps/server/**
       - libs/**
       - package-lock.json
-  pull_request:
-    paths:
-      - apps/server/**
-      - libs/**
-      - package-lock.json
+      - .github/workflows/test-server.yaml
 
 jobs:
   test:
