@@ -2,17 +2,15 @@ name: Run tests in @avenc/server
 
 on:
   push:
-    branches:
-      - '*'
-#    paths:
-#      - apps/server
-#      - libs/server-libs
-#      - package-lock.json
-#  pull_request:
-#    paths:
-#      - apps/server
-#      - libs/server-libs
-#      - package-lock.json
+    paths:
+      - apps/server
+      - libs/*
+      - package-lock.json
+  pull_request:
+    paths:
+      - apps/server
+      - libs/*
+      - package-lock.json
 
 jobs:
   test:
@@ -29,7 +27,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --prefix apps/server
+        run: npm ci
 
       - name: Run tests
         run: npm test --prefix apps/server
