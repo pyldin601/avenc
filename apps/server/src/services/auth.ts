@@ -1,10 +1,8 @@
-import { EmailQueueJob, HashUtils, RedisKeys } from "@avenc/server-libs";
+import { HashUtils, RedisKeys } from "@avenc/server-libs";
 import { randomBytes, randomUUID } from "node:crypto";
 import jwt from "jsonwebtoken";
 import Redis from "ioredis";
 import ms from "ms";
-import { Queue } from "bullmq";
-import { undefined } from "zod";
 
 const REFRESH_TOKEN_BYTES_SIZE = 256;
 
@@ -36,13 +34,11 @@ export abstract class AuthService {
   abstract logout(accessToken: string): Promise<void>;
   abstract logoutEverywhere(): Promise<void>;
   abstract getUserId(accessToken: string): Promise<UserId>;
-  abstract disconnect(): Promise<void>;
 }
 
 export class RedisBackedAuthService implements AuthService {
   constructor(
     private readonly redisClient: Redis,
-    private readonly emailQueue: Queue<EmailQueueJob>,
     private readonly config: AuthServiceConfig,
   ) {}
 
@@ -153,14 +149,25 @@ export class RedisBackedAuthService implements AuthService {
     }
 
     await this.redisClient.set(resetTokenKey, maybeUserId, "PX", ms(this.config.resetPasswordTokenTtl));
-    // TODO Maybe move this queue out of the auth service?
-    await this.emailQueue.add("sendEmail", { type: "resetPasswordRequest", email, resetToken });
 
     return resetToken;
   }
 
   public async resetPassword(resetToken: string, newPassword: string): Promise<void> {
-    throw new Error("Unimplemented");
+    const resetTokenKey = RedisKeys.RESET_TOKEN_KEY.replace("{resetToken}", resetToken);
+    const maybeUserId = await this.redisClient.get(resetTokenKey);
+
+    // Fail if user with given email does not exist
+    if (maybeUserId === null) {
+      throw new Error("Incorrect reset password token");
+    }
+
+    const userKey = RedisKeys.USER_KEY.replace("{userId}", maybeUserId);
+    const newPasswordHash = await HashUtils.hashPassword(newPassword);
+
+    if (await this.redisClient.exists(userKey)) {
+      this.redisClient.hmset(userKey, PASSWORD_HASH_FIELD, newPasswordHash);
+    }
   }
 
   public async logout(accessToken: string): Promise<void> {
@@ -178,11 +185,6 @@ export class RedisBackedAuthService implements AuthService {
     }
 
     return { value: payload.sub };
-  }
-
-  public async disconnect(): Promise<void> {
-    this.redisClient.disconnect();
-    await this.emailQueue.disconnect();
   }
 
   private makeAccessToken(userId: string): string {

@@ -4,24 +4,19 @@ import { AuthService, RedisBackedAuthService } from "./auth";
 import { describe } from "node:test";
 import jwt from "jsonwebtoken";
 import Redis from "ioredis";
-import { Queue, Worker } from "bullmq";
 
 const redisServer = new RedisMemoryServer();
 
 let authService: AuthService;
 let redisClient: Redis;
-let emailQueue: Queue<EmailQueueJob>;
 
 beforeEach(async () => {
   const redisPort = await redisServer.getPort();
   const redisHost = await redisServer.getHost();
 
   redisClient = new Redis(redisPort, redisHost, { maxRetriesPerRequest: null });
-  emailQueue = new Queue<EmailQueueJob>(RedisKeys.SEND_EMAIL_KEY, {
-    connection: redisClient,
-  });
 
-  authService = new RedisBackedAuthService(redisClient, emailQueue, {
+  authService = new RedisBackedAuthService(redisClient, {
     refreshTokenTtl: "10m",
     accessTokenTtl: "5m",
     resetPasswordTokenTtl: "5m",
@@ -30,7 +25,6 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await emailQueue.close();
   redisClient.disconnect();
   await redisServer.stop();
 });
@@ -102,32 +96,16 @@ describe("refresh token", () => {
   });
 });
 
-describe("reset password token", () => {
-  it("sends email with reset token on request to reset password token", async () => {
-    jest.setTimeout(5_000);
-
+describe("reset password", () => {
+  it("resets password successfully", async () => {
     await authService.signUpWithEmailAndPassword("test@email.com", "testPassword");
+    const resetToken = await authService.requestPasswordReset("test@email.com");
 
-    await authService.requestPasswordReset("test@email.com");
+    await expect(authService.resetPassword(resetToken, "newPassword")).resolves.toBeUndefined();
 
-    const job = await new Promise((resolve, reject) => {
-      const worker = new Worker<EmailQueueJob>(
-        RedisKeys.SEND_EMAIL_KEY,
-        async (job) => {
-          resolve(job.data);
-
-          await worker.close(true);
-        },
-        { connection: redisClient },
-      );
-
-      worker.on("error", reject);
-    });
-
-    expect(job).toEqual({
-      email: "test@email.com",
-      resetToken: expect.any(String),
-      type: "resetPasswordRequest",
+    await expect(authService.loginByEmailAndPassword("test@email.com", "newPassword")).resolves.toEqual({
+      accessToken: expect.any(String),
+      refreshToken: expect.any(String),
     });
   });
 
