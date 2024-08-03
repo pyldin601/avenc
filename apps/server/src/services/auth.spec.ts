@@ -82,3 +82,14 @@ describe("access token", () => {
     expect(payload.exp - payload.iat).toBe(300);
   });
 });
+
+describe("refresh token", () => {
+  it("returns new access and refresh token on refreshing token", async () => {
+    const userId = await authService.signUpWithEmailAndPassword("test@email.com", "testPassword");
+    const { refreshToken } = await authService.loginByEmailAndPassword("test@email.com", "testPassword");
+
+    const { accessToken } = await authService.refreshAuthToken(refreshToken);
+
+    expect(authService.getUserId(accessToken)).resolves.toEqual(userId);
+  });
+});
