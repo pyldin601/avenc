@@ -35,9 +35,9 @@ export class RedisBackedAuthService implements AuthService {
     // Create a Redis key for storing the email hash
     const emailHashKey = RedisKeys.EMAIL_HASH_KEY.replace("{emailHash}", emailHash);
 
-    // Attempt to set the email hash key with the user ID in Redis, with an expiration of 5 seconds
+    // Attempt to set the email hash key with the user ID in Redis
     // The "NX" option ensures that the key is only set if it does not already exist
-    const result = await this.redisClient.set(emailHashKey, userId, "EX", 5, "NX");
+    const result = await this.redisClient.set(emailHashKey, userId, "NX");
 
     // If the result is null, the email already exists in Redis, indicating a duplicate registration
     if (result === null) {
@@ -52,9 +52,6 @@ export class RedisBackedAuthService implements AuthService {
 
     // Store the user's email and hashed password in a Redis hash
     await this.redisClient.hmset(redisKey, "email", email, "password_hash", passwordHash);
-
-    // Set the email hash key with the user ID to persist the user record in Redis
-    await this.redisClient.set(emailHashKey, userId);
 
     // Return the user ID wrapped in an object
     return { value: userId };
