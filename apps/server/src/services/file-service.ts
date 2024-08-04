@@ -1,4 +1,5 @@
-import { undefined } from "zod";
+import { S3Client } from "../aws-clients";
+import Redis from "ioredis";
 
 export interface Metadata {
   format: string;
@@ -28,6 +29,11 @@ export abstract class FileService {
 }
 
 export class S3BackedFileService implements FileService {
+  constructor(
+    private readonly s3Client: S3Client,
+    private readonly redisClient: Redis,
+  ) {}
+
   public async requestGuestUploadLink(sessionId: string, fileId: string): Promise<string> {
     throw new Error("Not implemented");
   }
