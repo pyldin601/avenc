@@ -25,7 +25,9 @@ export async function main(env: NodeJS.ProcessEnv) {
     guestFileTtlMillis: ms(config.guestModeFilesTtl),
   });
 
-  const server = await listen(config.httpPort);
+  const server = await listen(config.httpPort, {
+    fileService,
+  });
 
   console.log("Hello World");
 }

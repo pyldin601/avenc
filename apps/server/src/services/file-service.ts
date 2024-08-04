@@ -22,14 +22,14 @@ export abstract class FileService {
    */
   abstract requestGuestUploadLink(sessionId: string, fileId: string): Promise<string>;
 
-  /**
-   * Analyzes the uploaded audio file for a guest and retrieves metadata.
-   *
-   * @param sessionId - The unique identifier for the guest's session.
-   * @param fileId - The unique identifier for the uploaded file.
-   * @returns A Metadata object containing details about the uploaded audio file.
-   */
-  abstract analyzeUploadedGuestFile(sessionId: string, fileId: string): Promise<Metadata>;
+  // /**
+  //  * Analyzes the uploaded audio file for a guest and retrieves metadata.
+  //  *
+  //  * @param sessionId - The unique identifier for the guest's session.
+  //  * @param fileId - The unique identifier for the uploaded file.
+  //  * @returns A Metadata object containing details about the uploaded audio file.
+  //  */
+  // abstract analyzeUploadedGuestFile(sessionId: string, fileId: string): Promise<Metadata>;
 }
 
 export class S3BackedFileService implements FileService {
