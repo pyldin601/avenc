@@ -1,9 +1,10 @@
-import { DeleteObjectsCommand, PutObjectCommand, S3Client as InnerClient } from "@aws-sdk/client-s3";
+import { DeleteObjectsCommand, GetObjectCommand, PutObjectCommand, S3Client as InnerClient } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { TypeUtils } from "@avenc/server-libs";
 
 export abstract class S3Client {
   abstract makePutObjectSignedUrl(key: string, ttl?: number): Promise<string>;
+  abstract makeGetObjectSignedUrl(key: string): Promise<string>;
   abstract deleteObjects(keys: string[]): Promise<void>;
 }
 
@@ -28,6 +29,15 @@ export class S3ClientImpl implements S3Client {
       Key: key,
       Bucket: this.bucket,
       Expires: TypeUtils.mapIfDefined(ttl, (value) => new Date(Date.now() + value)),
+    });
+
+    return getSignedUrl(this.innerClient, command);
+  }
+
+  public async makeGetObjectSignedUrl(key: string): Promise<string> {
+    const command = new GetObjectCommand({
+      Key: key,
+      Bucket: this.bucket,
     });
 
     return getSignedUrl(this.innerClient, command);
