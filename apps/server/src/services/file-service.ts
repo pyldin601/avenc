@@ -1,10 +1,15 @@
-import { S3Client } from "../aws-clients";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import Redis from "ioredis";
 
 export interface Metadata {
   format: string;
   audioBitrate: number;
   duration: number;
+}
+
+export interface Options {
+  guestFileTtl: number;
 }
 
 export abstract class FileService {
@@ -32,10 +37,17 @@ export class S3BackedFileService implements FileService {
   constructor(
     private readonly s3Client: S3Client,
     private readonly redisClient: Redis,
+    private readonly options: Options,
   ) {}
 
   public async requestGuestUploadLink(sessionId: string, fileId: string): Promise<string> {
-    throw new Error("Not implemented");
+    const command = new PutObjectCommand({
+      Bucket: "hello-world",
+      Key: `guest/${sessionId}/${fileId}/source-file`,
+      Expires: new Date(Date.now() + this.options.guestFileTtl),
+    });
+
+    return getSignedUrl(this.s3Client, command);
   }
 
   public async analyzeUploadedGuestFile(sessionId: string, fileId: string): Promise<Metadata> {

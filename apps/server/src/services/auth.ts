@@ -19,9 +19,9 @@ export interface UserId {
 
 export interface AuthServiceConfig {
   jwtSecretKey: string;
-  accessTokenTtlMs: number;
-  refreshTokenTtlMs: number;
-  resetPasswordTokenTtlMs: number;
+  accessTokenTtl: number;
+  refreshTokenTtl: number;
+  resetPasswordTokenTtl: number;
 }
 
 export abstract class AuthService {
@@ -154,7 +154,7 @@ export class RedisBackedAuthService implements AuthService {
       throw new Error("User with given email does not exist");
     }
 
-    await this.redisClient.set(resetTokenKey, maybeUserId, "PX", this.config.resetPasswordTokenTtlMs);
+    await this.redisClient.set(resetTokenKey, maybeUserId, "PX", this.config.resetPasswordTokenTtl);
 
     return resetToken;
   }
@@ -215,7 +215,7 @@ export class RedisBackedAuthService implements AuthService {
 
   private makeAccessToken(userId: string): string {
     return jwt.sign({ sub: userId }, this.config.jwtSecretKey, {
-      expiresIn: this.config.accessTokenTtlMs / 1000,
+      expiresIn: this.config.accessTokenTtl / 1000,
     });
   }
 
@@ -226,6 +226,6 @@ export class RedisBackedAuthService implements AuthService {
   private async storeRefreshToken(userId: string, refreshToken: string): Promise<void> {
     const refreshTokenKey = RedisKeys.REFRESH_TOKEN_KEY.replace("{refreshToken}", refreshToken);
 
-    this.redisClient.set(refreshTokenKey, userId, "PX", this.config.refreshTokenTtlMs);
+    this.redisClient.set(refreshTokenKey, userId, "PX", this.config.refreshTokenTtl);
   }
 }

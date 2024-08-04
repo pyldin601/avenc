@@ -17,9 +17,9 @@ beforeEach(async () => {
   redisClient = new Redis(redisPort, redisHost, { maxRetriesPerRequest: null });
 
   authService = new RedisBackedAuthService(redisClient, {
-    refreshTokenTtlMs: ms("10m"),
-    accessTokenTtlMs: ms("5m"),
-    resetPasswordTokenTtlMs: ms("10m"),
+    refreshTokenTtl: ms("10m"),
+    accessTokenTtl: ms("5m"),
+    resetPasswordTokenTtl: ms("10m"),
     jwtSecretKey: "jwtSecretKey",
   });
 });
