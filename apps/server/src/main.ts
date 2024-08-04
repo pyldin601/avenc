@@ -1,9 +1,10 @@
-import { Config } from "./config";
-import { RedisBackedAuthService } from "./services/auth";
 import Redis from "ioredis";
 import ms from "ms";
+import { Config } from "./config";
+import { RedisBackedAuthService } from "./services/auth";
 import { S3BackedFileService } from "./services/file-service";
 import { S3ClientImpl } from "./aws-clients";
+import { listen } from "./server";
 
 export async function main(env: NodeJS.ProcessEnv) {
   const config = Config.fromEnv(env);
@@ -23,6 +24,8 @@ export async function main(env: NodeJS.ProcessEnv) {
   const fileService = new S3BackedFileService(s3Client, redis, {
     guestFileTtlMillis: ms(config.guestModeFilesTtl),
   });
+
+  const server = await listen(config.httpPort);
 
   console.log("Hello World");
 }

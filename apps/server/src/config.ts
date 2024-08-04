@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const EnvSchema = z.object({
+  PORT: z.preprocess(Number, z.number()),
   // AWS
   AWS_ACCESS_KEY_ID: z.string(),
   AWS_SECRET_ACCESS_KEY: z.string(),
@@ -21,6 +22,7 @@ const EnvSchema = z.object({
 
 export class Config {
   constructor(
+    public readonly httpPort: number,
     // AWS
     public readonly awsAccessKeyId: string,
     public readonly awsSecretAccessKey: string,
@@ -43,6 +45,7 @@ export class Config {
     const parsedEnv = EnvSchema.parse(env);
 
     return new Config(
+      parsedEnv.PORT,
       // AWS
       parsedEnv.AWS_ACCESS_KEY_ID,
       parsedEnv.AWS_SECRET_ACCESS_KEY,
