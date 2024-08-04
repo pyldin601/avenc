@@ -11,6 +11,7 @@
   "workspaces": [
     "apps/server",
     "apps/encoder",
+    "apps/frontend",
     "libs/server-libs"
   ],
   "devDependencies": {
