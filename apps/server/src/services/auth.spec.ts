@@ -1,9 +1,9 @@
-import { EmailQueueJob, RedisKeys } from "@avenc/server-libs";
 import RedisMemoryServer from "redis-memory-server";
 import { AuthService, RedisBackedAuthService } from "./auth";
 import { describe } from "node:test";
 import jwt from "jsonwebtoken";
 import Redis from "ioredis";
+import ms from "ms";
 
 const redisServer = new RedisMemoryServer();
 
@@ -17,9 +17,9 @@ beforeEach(async () => {
   redisClient = new Redis(redisPort, redisHost, { maxRetriesPerRequest: null });
 
   authService = new RedisBackedAuthService(redisClient, {
-    refreshTokenTtl: "10m",
-    accessTokenTtl: "5m",
-    resetPasswordTokenTtl: "5m",
+    refreshTokenTtlMs: ms("10m"),
+    accessTokenTtlMs: ms("5m"),
+    resetPasswordTokenTtlMs: ms("10m"),
     jwtSecretKey: "jwtSecretKey",
   });
 });

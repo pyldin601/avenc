@@ -2,7 +2,6 @@ import { HashUtils, RedisKeys } from "@avenc/server-libs";
 import { randomBytes, randomUUID } from "node:crypto";
 import jwt from "jsonwebtoken";
 import Redis from "ioredis";
-import ms from "ms";
 
 const REFRESH_TOKEN_BYTES_SIZE = 256;
 
@@ -20,9 +19,9 @@ export interface UserId {
 
 export interface AuthServiceConfig {
   jwtSecretKey: string;
-  accessTokenTtl: string;
-  refreshTokenTtl: string;
-  resetPasswordTokenTtl: string;
+  accessTokenTtlMs: number;
+  refreshTokenTtlMs: number;
+  resetPasswordTokenTtlMs: number;
 }
 
 export abstract class AuthService {
@@ -155,7 +154,7 @@ export class RedisBackedAuthService implements AuthService {
       throw new Error("User with given email does not exist");
     }
 
-    await this.redisClient.set(resetTokenKey, maybeUserId, "PX", ms(this.config.resetPasswordTokenTtl));
+    await this.redisClient.set(resetTokenKey, maybeUserId, "PX", this.config.resetPasswordTokenTtlMs);
 
     return resetToken;
   }
@@ -216,7 +215,7 @@ export class RedisBackedAuthService implements AuthService {
 
   private makeAccessToken(userId: string): string {
     return jwt.sign({ sub: userId }, this.config.jwtSecretKey, {
-      expiresIn: this.config.accessTokenTtl,
+      expiresIn: this.config.accessTokenTtlMs / 1000,
     });
   }
 
@@ -225,9 +224,8 @@ export class RedisBackedAuthService implements AuthService {
   }
 
   private async storeRefreshToken(userId: string, refreshToken: string): Promise<void> {
-    const refreshTokenTtlSeconds = ms(this.config.refreshTokenTtl) / 1000;
     const refreshTokenKey = RedisKeys.REFRESH_TOKEN_KEY.replace("{refreshToken}", refreshToken);
 
-    this.redisClient.set(refreshTokenKey, userId, "EX", refreshTokenTtlSeconds);
+    this.redisClient.set(refreshTokenKey, userId, "PX", this.config.refreshTokenTtlMs);
   }
 }
