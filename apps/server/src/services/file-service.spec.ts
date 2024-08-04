@@ -18,7 +18,7 @@ beforeEach(async () => {
   const s3Client = new S3Client({ region: "eu-central-1" });
 
   fileService = new S3BackedFileService(s3Client, redisClient, {
-    guestFileTtl: 60_000,
+    guestFileTtlMillis: 60_000,
   });
 });
 

@@ -7,8 +7,8 @@ export interface Metadata {
   duration: number;
 }
 
-export interface Options {
-  guestFileTtl: number;
+export interface Config {
+  guestFileTtlMillis: number;
 }
 
 export abstract class FileService {
@@ -36,13 +36,13 @@ export class S3BackedFileService implements FileService {
   constructor(
     private readonly s3Client: S3Client,
     private readonly redisClient: Redis,
-    private readonly options: Options,
+    private readonly config: Config,
   ) {}
 
   public async requestGuestUploadLink(sessionId: string, fileId: string): Promise<string> {
     const key = `guest/${sessionId}/${fileId}/source-file`;
 
-    return this.s3Client.makePutObjectSignedUrl(key, this.options.guestFileTtl);
+    return this.s3Client.makePutObjectSignedUrl(key, this.config.guestFileTtlMillis);
   }
 
   public async getGuestFileUrl(sessionId: string, fileId: string): Promise<string> {
