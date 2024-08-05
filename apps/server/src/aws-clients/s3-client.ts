@@ -5,18 +5,9 @@ import { TypeUtils } from "@avenc/server-libs";
 export abstract class S3Client {
   abstract makePutObjectSignedUrl(
     key: string,
-    contentLength: number,
-    options: {
-      objectTtl?: number;
-      signedUrlTtl?: number;
-    },
+    options: { contentLength?: number; objectTtl?: number; signedUrlTtl?: number },
   ): Promise<string>;
-  abstract makeGetObjectSignedUrl(
-    key: string,
-    options: {
-      signedUrlTtl?: number;
-    },
-  ): Promise<string>;
+  abstract makeGetObjectSignedUrl(key: string, options: { signedUrlTtl?: number }): Promise<string>;
   abstract deleteObjects(keys: string[]): Promise<void>;
 }
 
@@ -29,22 +20,17 @@ export class S3ClientImpl implements S3Client {
     defaultRegion: string,
     private readonly bucket: string,
   ) {
-    this.innerClient = new InnerClient([
-      {
-        credentials: { accessKeyId, secretAccessKey, defaultRegion },
-      },
-    ]);
+    this.innerClient = new InnerClient([{ credentials: { accessKeyId, secretAccessKey, defaultRegion } }]);
   }
 
   public async makePutObjectSignedUrl(
     key: string,
-    contentLength: number,
-    options: { objectTtl?: number; signedUrlTtl?: number },
+    options: { contentLength?: number; objectTtl?: number; signedUrlTtl?: number },
   ): Promise<string> {
     const command = new PutObjectCommand({
       Key: key,
       Bucket: this.bucket,
-      ContentLength: contentLength,
+      ContentLength: options.contentLength,
       Expires: TypeUtils.mapIfDefined(options.objectTtl, (value) => new Date(Date.now() + value)),
     });
 

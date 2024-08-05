@@ -16,9 +16,9 @@ const EnvSchema = z.object({
   ACCESS_TOKEN_TTL: z.string().default("5m"),
   REFRESH_TOKEN_TTL: z.string().default("30d"),
   RESET_PASSWORD_TOKEN_TTL: z.string().default("15m"),
-  GUEST_MODE_SESSION_TTL: z.string().default("24h"),
-  GUEST_MODE_FILES_TTL: z.string().default("24h"),
-  GUEST_MODE_SIGNED_URL_TTL: z.string().default("30m"),
+  GUEST_SESSION_TTL: z.string().default("24h"),
+  GUEST_FILE_TTL: z.string().default("24h"),
+  GUEST_SIGNED_URL_TTL: z.string().default("30m"),
 });
 
 export class Config {
@@ -38,9 +38,9 @@ export class Config {
     public readonly accessTokenTtl: string,
     public readonly refreshTokenTtl: string,
     public readonly resetPasswordTokenTtl: string,
-    public readonly guestModeSessionTtl: string,
-    public readonly guestModeFilesTtl: string,
-    public readonly guestModeSignedUrlTtl: string,
+    public readonly guestSessionTtl: string,
+    public readonly guestFileTtl: string,
+    public readonly guestSignedUrlTtl: string,
   ) {}
 
   public static fromEnv(env: unknown) {
@@ -62,9 +62,9 @@ export class Config {
       parsedEnv.ACCESS_TOKEN_TTL,
       parsedEnv.REFRESH_TOKEN_TTL,
       parsedEnv.RESET_PASSWORD_TOKEN_TTL,
-      parsedEnv.GUEST_MODE_SESSION_TTL,
-      parsedEnv.GUEST_MODE_FILES_TTL,
-      parsedEnv.GUEST_MODE_SIGNED_URL_TTL,
+      parsedEnv.GUEST_SESSION_TTL,
+      parsedEnv.GUEST_FILE_TTL,
+      parsedEnv.GUEST_SIGNED_URL_TTL,
     );
   }
 }
