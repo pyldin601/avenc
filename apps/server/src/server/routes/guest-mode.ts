@@ -1,8 +1,9 @@
 import express from "express";
 import Redis from "ioredis";
+import { Queue } from "bullmq";
 import { z } from "zod";
 import { extname, basename } from "node:path";
-import { RedisKeys } from "@avenc/server-libs";
+import { Queues, RedisKeys } from "@avenc/server-libs";
 import { FileService } from "../../services/file-service";
 import { Config } from "../../config";
 
@@ -58,6 +59,7 @@ export function startTranscodingJob(
   config: Config,
   fileService: FileService,
   redisClient: Redis,
+  guestTranscodeJobQueue: Queue<Queues.GuestTranscodeJob>,
 ): express.RequestHandler<{ sessionId: string; jobId: string }, void | { error: string }> {
   return async (req, res) => {
     const { sessionId, jobId } = req.params;
@@ -86,8 +88,12 @@ export function startTranscodingJob(
     const sourceFileSignedUrl = await fileService.createGuestSourceFileGetSignedUrl(sessionId, jobId, filename);
     const targetFileSignedUrl = await fileService.createGuestTargetFilePutSignedUrl(sessionId, jobId, targetFilename);
 
-    // TODO Send conversion request using bullmq Queue.
-    // TODO How to track jobs?
+    await guestTranscodeJobQueue.add("guest-transcode", {
+      sourceUrl: sourceFileSignedUrl,
+      destinationUrl: targetFileSignedUrl,
+      format: targetFormat,
+      quality: "low",
+    });
 
     res.status(200).end();
   };
