@@ -20,7 +20,12 @@ export abstract class FileService {
    * @param fileId - The unique identifier for the uploaded file.
    * @return A signed direct URL for the guest to upload the audio file.
    */
-  abstract requestGuestUploadLink(sessionId: string, fileId: string): Promise<string>;
+  abstract requestGuestUploadSignedUrl(
+    sessionId: string,
+    fileId: string,
+    filename: string,
+    size: number,
+  ): Promise<string>;
 
   // /**
   //  * Analyzes the uploaded audio file for a guest and retrieves metadata.
@@ -39,10 +44,15 @@ export class S3BackedFileService implements FileService {
     private readonly config: Config,
   ) {}
 
-  public async requestGuestUploadLink(sessionId: string, fileId: string): Promise<string> {
-    const key = `guest/${sessionId}/${fileId}/source-file`;
+  public async requestGuestUploadSignedUrl(
+    sessionId: string,
+    fileId: string,
+    filename: string,
+    filesize: number,
+  ): Promise<string> {
+    const key = `guest/${sessionId}/${fileId}/${filename}`;
 
-    return this.s3Client.makePutObjectSignedUrl(key, this.config.guestFileTtlMillis);
+    return this.s3Client.makePutObjectSignedUrl(key, filesize, this.config.guestFileTtlMillis);
   }
 
   public async getGuestFileUrl(sessionId: string, fileId: string): Promise<string> {

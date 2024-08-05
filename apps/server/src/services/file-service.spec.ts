@@ -32,7 +32,7 @@ describe("create upload link", () => {
     const sessionId = randomUUID();
     const fileId = randomUUID();
 
-    const uploadLink = await fileService.requestGuestUploadLink(sessionId, fileId);
+    const uploadLink = await fileService.requestGuestUploadSignedUrl(sessionId, fileId);
 
     expect(uploadLink).toContain("https://");
     expect(uploadLink).toContain(sessionId);
