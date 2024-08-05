@@ -3,7 +3,7 @@ import { FileService } from "../../services/file-service";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 
-export function createAudioFileUploadLink(
+export function createUploadAudioFileUrl(
   fileService: FileService,
 ): express.RequestHandler<{ sessionId: string }, { signedUrl: string; fileId: string }> {
   const RequestJsonSchema = z.object({
@@ -16,7 +16,7 @@ export function createAudioFileUploadLink(
     const { filename, filesize } = RequestJsonSchema.parse(req.body);
     const fileId = randomUUID();
 
-    const signedUrl = await fileService.requestGuestUploadSignedUrl(sessionId, fileId, filename, filesize);
+    const signedUrl = await fileService.createGuestFileUploadSignedUrl(sessionId, fileId, { filename, filesize });
 
     res.json({ signedUrl, fileId });
   };
@@ -34,7 +34,7 @@ export function convertAudioFile(
     const { sessionId, fileId } = req.params;
     const { format, quality } = RequestJsonSchema.parse(req.body);
 
-    // TODO Make a signedUrl to upload converted file.
+    // TODO Make a temporary signedUrl to upload converted file.
     // TODO Send conversion request using bullmq Queue.
     // TODO How to track jobs?
 

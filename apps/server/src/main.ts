@@ -22,7 +22,8 @@ export async function main(env: NodeJS.ProcessEnv) {
     resetPasswordTokenTtlMillis: ms(config.resetPasswordTokenTtl),
   });
   const fileService = new S3BackedFileService(s3Client, redis, {
-    guestFileTtlMillis: ms(config.guestModeFilesTtl),
+    guestUploadedFileTtlMillis: ms(config.guestModeFilesTtl),
+    guestSignedUrlTtlMillis: ms(config.guestModeSignedUrlTtl),
   });
 
   const server = await listen(config.httpPort, {
