@@ -8,15 +8,15 @@ export interface Config {
 export abstract class FileService {
   /**
    * Creates a signed URL to upload a source file.
-   * This URL should be used then to PUT file content.
+   * This URL should be used to PUT file content.
    *
    * @param sessionId - The unique identifier for the guest's session.
    * @param jobId - The unique identifier for the transcoding job.
    * @param filename - A filename of the source file.
    * @param filesize - A size of the source file.
-   * @return A signed direct URL for the guest to upload the audio file.
+   * @return A signed direct URL for the guest to upload the source file.
    */
-  abstract createGuestSourceFileSignedUrl(
+  abstract createGuestSourceFilePutSignedUrl(
     sessionId: string,
     jobId: string,
     filename: string,
@@ -24,15 +24,26 @@ export abstract class FileService {
   ): Promise<string>;
 
   /**
+   * Creates a signed URL to download a source file.
+   * This URL should be used to GET file content.
+   *
+   * @param sessionId - The unique identifier for the guest's session.
+   * @param jobId - The unique identifier for the transcoding job.
+   * @param filename - A filename of the source file.
+   * @return A signed direct URL to download the source file.
+   */
+  abstract createGuestSourceFileGetSignedUrl(sessionId: string, jobId: string, filename: string): Promise<string>;
+
+  /**
    * Creates a signed URL to upload transcoded file.
-   * This URL should be used then to PUT file content.
+   * This URL should be used to PUT file content.
    *
    * @param sessionId - The unique identifier for the guest's session.
    * @param jobId - The unique identifier for the transcoding job.
    * @param filename - A filename of the transcoded file.
    * @return A signed direct URL for the transcoder to upload the transcoded file.
    */
-  abstract createGuestTargetFileSignedUrl(sessionId: string, jobId: string, filename: string): Promise<string>;
+  abstract createGuestTargetFilePutSignedUrl(sessionId: string, jobId: string, filename: string): Promise<string>;
 }
 
 export class S3BackedFileService implements FileService {
@@ -41,7 +52,7 @@ export class S3BackedFileService implements FileService {
     private readonly config: Config,
   ) {}
 
-  public async createGuestSourceFileSignedUrl(
+  public async createGuestSourceFilePutSignedUrl(
     sessionId: string,
     jobId: string,
     filename: string,
@@ -56,7 +67,15 @@ export class S3BackedFileService implements FileService {
     });
   }
 
-  public async createGuestTargetFileSignedUrl(sessionId: string, jobId: string, filename: string): Promise<string> {
+  public async createGuestSourceFileGetSignedUrl(sessionId: string, jobId: string, filename: string): Promise<string> {
+    const key = `guest/${sessionId}/jobs/${jobId}/${filename}`;
+
+    return this.s3Client.makeGetObjectSignedUrl(key, {
+      signedUrlTtl: this.config.guestSignedUrlTtlMillis,
+    });
+  }
+
+  public async createGuestTargetFilePutSignedUrl(sessionId: string, jobId: string, filename: string): Promise<string> {
     const key = `guest/${sessionId}/jobs/${jobId}/output/${filename}`;
 
     return this.s3Client.makePutObjectSignedUrl(key, {
