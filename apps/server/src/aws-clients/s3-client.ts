@@ -3,8 +3,20 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { TypeUtils } from "@avenc/server-libs";
 
 export abstract class S3Client {
-  abstract makePutObjectSignedUrl(key: string, contentLength?: number, ttl?: number): Promise<string>;
-  abstract makeGetObjectSignedUrl(key: string): Promise<string>;
+  abstract makePutObjectSignedUrl(
+    key: string,
+    contentLength: number,
+    options: {
+      objectTtl?: number;
+      signedUrlTtl?: number;
+    },
+  ): Promise<string>;
+  abstract makeGetObjectSignedUrl(
+    key: string,
+    options: {
+      signedUrlTtl?: number;
+    },
+  ): Promise<string>;
   abstract deleteObjects(keys: string[]): Promise<void>;
 }
 
@@ -24,24 +36,32 @@ export class S3ClientImpl implements S3Client {
     ]);
   }
 
-  public async makePutObjectSignedUrl(key: string, contentLength?: number, ttl?: number): Promise<string> {
+  public async makePutObjectSignedUrl(
+    key: string,
+    contentLength: number,
+    options: { objectTtl?: number; signedUrlTtl?: number },
+  ): Promise<string> {
     const command = new PutObjectCommand({
       Key: key,
       Bucket: this.bucket,
       ContentLength: contentLength,
-      Expires: TypeUtils.mapIfDefined(ttl, (value) => new Date(Date.now() + value)),
+      Expires: TypeUtils.mapIfDefined(options.objectTtl, (value) => new Date(Date.now() + value)),
     });
 
-    return getSignedUrl(this.innerClient, command);
+    return getSignedUrl(this.innerClient, command, {
+      expiresIn: options.signedUrlTtl,
+    });
   }
 
-  public async makeGetObjectSignedUrl(key: string): Promise<string> {
+  public async makeGetObjectSignedUrl(key: string, options: { signedUrlTtl?: number }): Promise<string> {
     const command = new GetObjectCommand({
       Key: key,
       Bucket: this.bucket,
     });
 
-    return getSignedUrl(this.innerClient, command);
+    return getSignedUrl(this.innerClient, command, {
+      expiresIn: options.signedUrlTtl,
+    });
   }
 
   public async deleteObjects(keys: string[]): Promise<void> {
