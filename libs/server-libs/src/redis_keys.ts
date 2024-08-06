@@ -7,4 +7,7 @@ export const REFRESH_TOKEN_KEY = "avenc:refresh_token:{refreshToken}";
 export const RESET_TOKEN_KEY = "avenc:reset_token:{resetToken}";
 export const SESSIONS_KEY = "avenc:sessions:{userId}";
 
+export const GUEST_JOB_KEY = "avenc:guest:job:{jobId}";
+export const GUEST_JOBS_KEY = "avenc:guest:jobs:{sessionId}";
+
 export const SEND_EMAIL_KEY = "avenc:send_email";

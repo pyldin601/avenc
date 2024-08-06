@@ -17,11 +17,11 @@ export interface UserId {
   value: string;
 }
 
-export interface AuthServiceConfig {
+export interface Config {
   jwtSecretKey: string;
-  accessTokenTtlMs: number;
-  refreshTokenTtlMs: number;
-  resetPasswordTokenTtlMs: number;
+  accessTokenTtlMillis: number;
+  refreshTokenTtlMillis: number;
+  resetPasswordTokenTtlMillis: number;
 }
 
 export abstract class AuthService {
@@ -38,7 +38,7 @@ export abstract class AuthService {
 export class RedisBackedAuthService implements AuthService {
   constructor(
     private readonly redisClient: Redis,
-    private readonly config: AuthServiceConfig,
+    private readonly config: Config,
   ) {}
 
   public async signUpWithEmailAndPassword(email: string, password: string): Promise<UserId> {
@@ -154,7 +154,7 @@ export class RedisBackedAuthService implements AuthService {
       throw new Error("User with given email does not exist");
     }
 
-    await this.redisClient.set(resetTokenKey, maybeUserId, "PX", this.config.resetPasswordTokenTtlMs);
+    await this.redisClient.set(resetTokenKey, maybeUserId, "PX", this.config.resetPasswordTokenTtlMillis);
 
     return resetToken;
   }
@@ -215,7 +215,7 @@ export class RedisBackedAuthService implements AuthService {
 
   private makeAccessToken(userId: string): string {
     return jwt.sign({ sub: userId }, this.config.jwtSecretKey, {
-      expiresIn: this.config.accessTokenTtlMs / 1000,
+      expiresIn: this.config.accessTokenTtlMillis / 1000,
     });
   }
 
@@ -226,6 +226,6 @@ export class RedisBackedAuthService implements AuthService {
   private async storeRefreshToken(userId: string, refreshToken: string): Promise<void> {
     const refreshTokenKey = RedisKeys.REFRESH_TOKEN_KEY.replace("{refreshToken}", refreshToken);
 
-    this.redisClient.set(refreshTokenKey, userId, "PX", this.config.refreshTokenTtlMs);
+    this.redisClient.set(refreshTokenKey, userId, "PX", this.config.refreshTokenTtlMillis);
   }
 }

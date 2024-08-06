@@ -1,2 +1,1 @@
-export * from "./s3Client";
-export * from "./mediaConvertClient";
+export * from "./s3-client";

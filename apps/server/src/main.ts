@@ -1,20 +1,34 @@
-import { Config } from "./config";
-import { MediaConvertClient, S3Client } from "./aws-clients";
-import { RedisBackedAuthService } from "./services/auth";
 import Redis from "ioredis";
 import ms from "ms";
+import { Config } from "./config";
+import { RedisBackedAuthService } from "./services/auth";
+import { S3BackedFileService } from "./services/file-service";
+import { S3ClientImpl } from "./aws-clients";
+import { listen } from "./server";
 
 export async function main(env: NodeJS.ProcessEnv) {
   const config = Config.fromEnv(env);
   const redis = new Redis(config.redisPort, config.redisHost);
+  const s3Client = new S3ClientImpl(
+    config.awsAccessKeyId,
+    config.awsSecretAccessKey,
+    config.awsDefaultRegion,
+    config.awsS3Bucket,
+  );
   const authService = new RedisBackedAuthService(redis, {
     jwtSecretKey: config.jwtSecretKey,
-    refreshTokenTtlMs: ms("7d"),
-    accessTokenTtlMs: ms("15m"),
-    resetPasswordTokenTtlMs: ms("1m"),
+    accessTokenTtlMillis: ms(config.accessTokenTtl),
+    refreshTokenTtlMillis: ms(config.refreshTokenTtl),
+    resetPasswordTokenTtlMillis: ms(config.resetPasswordTokenTtl),
   });
-  const s3Client = new S3Client(config.awsAccessKeyId, config.awsSecretAccessKey);
-  const mediaConvertClient = new MediaConvertClient(config.awsAccessKeyId, config.awsSecretAccessKey);
+  const fileService = new S3BackedFileService(s3Client, redis, {
+    guestUploadedFileTtlMillis: ms(config.guestModeFilesTtl),
+    guestSignedUrlTtlMillis: ms(config.guestModeSignedUrlTtl),
+  });
+
+  const server = await listen(config.httpPort, {
+    fileService,
+  });
 
   console.log("Hello World");
 }
